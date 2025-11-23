@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Docs Container</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --accent: #0ea5e9
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: #0f1724
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 28px auto;
+      padding: 20px
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 36, 0.06)
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px
+    }
+
+    input[type=text],
+    input[type=password] {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6eef6
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    .ghost {
+      background: transparent;
+      border: 1px solid #e6eef6;
+      color: var(--muted)
+    }
+
+    .list {
+      margin-top: 12px
+    }
+
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #f1f5f9;
+      margin-bottom: 8px
+    }
+
+    .meta {
+      display: flex;
+      flex-direction: column
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px
+    }
+
+    footer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    /* Toast / popup notifications (centered) */
+    .toast-container {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      min-width: 220px;
+      max-width: 88vw;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: white;
+      box-shadow: 0 6px 18px rgba(2, 6, 23, 0.12);
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity .22s, transform .22s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      background: #16a34a;
+    }
+
+    .toast.error {
+      background: #dc2626;
+    }
+
+    .toast.info {
+      background: #0ea5e9;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Repo Docs Library</h1>
+        <p class="small">Simple static page that lists files stored in the same GitHub repo. Password-protected access
+          to download/print. Perfect for a quick, temporary share to get prints done.</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <input id="pw" type="password" placeholder="Enter access password" />
+        <button id="unlock">Unlock</button>
+        <button id="lock" class="ghost">Lock</button>
+        <input id="search" type="text" placeholder="Search files (name)" style="flex:1" />
+      </div>
+
+      <div id="controlsAfter" style="display:none;margin-bottom:8px">
+        <button id="showAll" class="ghost">Show all files</button>
+        <button id="copyRepo" class="ghost">Copy raw repo base URL</button>
+        <span class="small" style="margin-left:8px">Tip: Put your docs inside a folder (eg. <code>/docs</code>) in the
+          repo and update the manifest below.</span>
+
+        <!-- Upload UI (shown after unlocking) -->
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="fileInput" type="file" />
+          <button id="uploadBtn" class="ghost">Upload</button>
+          <label class="small" style="margin-left:6px;display:flex;align-items:center;gap:6px"><input id="ghUpload" type="checkbox" /> Upload to GitHub repo</label>
+        </div>
+
+        <div id="ghFields" style="display:none;margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="ghOwner" type="text" placeholder="owner" style="padding:6px;border-radius:6px;border:1px solid #e6eef6" />
+          <input id="ghRepo" type="text" placeholder="repo" style="padding:6px;border-radius:6px;border:1px solid #e6eef6" />
+          <input id="ghBranch" type="text" placeholder="branch (default: main)" style="padding:6px;border-radius:6px;border:1px solid #e6eef6" />
+          <input id="ghToken" type="password" placeholder="GitHub token (optional for public repos)" style="padding:6px;border-radius:6px;border:1px solid #e6eef6" />
+        </div>
+        <div class="small" style="margin-top:6px;color:var(--muted)">Warning: If you choose GitHub upload, provide a personal access token with `repo` scope for private repos. Tokens are sent only to GitHub's API; they are not stored.</div>
+      </div>
+
+      <div id="list" class="list">
+        <!-- file items appear here -->
+      </div>
+
+      <div id="lockedMsg" class="hint">Library is locked. Enter the password and click Unlock to view and download
+        files.</div>
+
+    </div>
+
+    <footer>
+      <div class="small">How to use: upload your files to the repo (eg. <code>/docs</code>), edit the <code>FILES</code>
+        array in this HTML (or keep it up to date), then publish with GitHub Pages. Anyone with the repo pages URL and
+        the password can download/print. Not for high-security files.</div>
+    </footer>
+  </div>
+
+  <script>
+    /* ====== CONFIG - edit these when you upload files to your GitHub repo ======
+       1) FILES: Add an entry for every file you uploaded. Use the raw.githubusercontent.com URL or relative path.
+       2) BASE_URL: Optional base URL for raw files if you want to build URLs from filenames.
+       3) PASSWORD: Set a simple password. This is client-side only. Don't use sensitive data.
+    
+       Example raw URL (public repo):
+       https://raw.githubusercontent.com/<username>/<repo>/main/docs/your-file.pdf
+    */
+
+    const FILES = [
+      { name: '10th marksheet.jpg', url: '/docs/10th marksheet.jpg', type: 'image/jpeg' },
+      { name: '12th marksheet.jpg', url: '/docs/12th marksheet.jpg', type: 'image/jpeg' },
+      { name: '1st sem result.pdf', url: '/docs/1st sem result.pdf', type: 'application/pdf' },
+      { name: '2nd sem result.pdf', url: '/docs/2nd sem result.pdf', type: 'application/pdf' },
+      { name: '3rd sem result.pdf', url: '/docs/3rd sem result.pdf', type: 'application/pdf' },
+      { name: '4th sem result.pdf', url: '/docs/4th sem result.pdf', type: 'application/pdf' },
+      { name: '5th sem result.pdf', url: '/docs/5th sem result.pdf', type: 'application/pdf' },
+      { name: '6th sem result.pdf', url: '/docs/6th sem result.pdf', type: 'application/pdf' },
+      { name: 'Bank Passbook.jpg', url: '/docs/Bank Passbook.jpg', type: 'image/jpeg' },
+      { name: 'Cast Certificate.jpg', url: '/docs/Cast Certificate.jpg', type: 'image/jpeg' },
+      { name: 'cast_cert_verification.pdf', url: '/docs/cast_cert_verification.pdf', type: 'application/pdf' },
+      { name: 'Domicile Certificate.jpg', url: '/docs/Domicile Certificate.jpg', type: 'image/jpeg' },
+      { name: 'Domicile_cert_verification.pdf', url: '/docs/Domicile_cert_verification.pdf', type: 'application/pdf' },
+      { name: 'Father Adhar Back.jpg', url: '/docs/Father Adhar Back.jpg', type: 'image/jpeg' },
+      { name: 'Father Adhar front.jpg', url: '/docs/Father Adhar front.jpg', type: 'image/jpeg' },
+      { name: 'Fee Reciept 1.jpg', url: '/docs/Fee Reciept 1.jpg', type: 'image/jpeg' },
+      { name: 'Final_Print New_Copy.pdf', url: '/docs/Final_Print New_Copy.pdf', type: 'application/pdf' },
+      { name: 'Income Certificate.jpg', url: '/docs/Income Certificate.jpg', type: 'image/jpeg' },
+      { name: 'Income_cert_verification.pdf', url: '/docs/Income_cert_verification.pdf', type: 'application/pdf' },
+      { name: 'Mother Adhar Back.jpg', url: '/docs/Mother Adhar Back.jpg', type: 'image/jpeg' },
+      { name: 'Mother Adhar Front.jpg', url: '/docs/Mother Adhar Front.jpg', type: 'image/jpeg' },
+      { name: 'My Adhar Back.jpg', url: '/docs/My Adhar Back.jpg', type: 'image/jpeg' },
+      { name: 'My Adhar Front.jpg', url: '/docs/My Adhar Front.jpg', type: 'image/jpeg' },
+      { name: 'Ration Card.jpg', url: '/docs/Ration Card.jpg', type: 'image/jpeg' },
+    ];
+
+    // If your files are in a folder and you want to provide just filenames, set BASE_URL and use filenames in FILES
+    const BASE_URL = '';
+
+    // Password (client-side check). Change this to the password you want. It's stored in the page source so don't use secret material.
+    const PASSWORD = 'dinesh@docs';
+    /* ======================================================================= */
+
+    const listEl = document.getElementById('list');
+    const lockedMsg = document.getElementById('lockedMsg');
+    const pwInput = document.getElementById('pw');
+    const unlockBtn = document.getElementById('unlock');
+    const lockBtn = document.getElementById('lock');
+    const controlsAfter = document.getElementById('controlsAfter');
+    const searchInput = document.getElementById('search');
+    const showAllBtn = document.getElementById('showAll');
+    const copyRepoBtn = document.getElementById('copyRepo');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const ghUpload = document.getElementById('ghUpload');
+    const ghFields = document.getElementById('ghFields');
+    const ghOwner = document.getElementById('ghOwner');
+    const ghRepo = document.getElementById('ghRepo');
+    const ghBranch = document.getElementById('ghBranch');
+    const ghToken = document.getElementById('ghToken');
+
+    let unlocked = false;
+    let currentFiles = FILES.slice();
+
+    function buildUrl(entry) {
+      if (entry.url && entry.url.trim()) return entry.url;
+      if (BASE_URL && entry.name) return BASE_URL.replace(/\/$/, '') + '/' + encodeURIComponent(entry.name);
+      return entry.name || '';
+    }
+
+    function renderList(filter = '') {
+      listEl.innerHTML = '';
+      const files = currentFiles.filter(f => f.name.toLowerCase().includes(filter.toLowerCase()));
+      if (files.length === 0) { listEl.innerHTML = '<div class="small">No files found.</div>'; return; }
+      files.forEach((f, idx) => {
+        const url = buildUrl(f);
+        const item = document.createElement('div'); item.className = 'item';
+        const meta = document.createElement('div'); meta.className = 'meta';
+        const title = document.createElement('div'); title.innerHTML = `<strong>${escapeHtml(f.name)}</strong>`;
+        const sub = document.createElement('div'); sub.className = 'small'; sub.textContent = url;
+        meta.appendChild(title); meta.appendChild(sub);
+
+        const actions = document.createElement('div');
+        if (unlocked) {
+          const open = document.createElement('button'); open.textContent = 'Open'; open.onclick = () => window.open(url, '_blank');
+          const download = document.createElement('button'); download.textContent = 'Download'; download.className = 'ghost'; download.style.marginLeft = '8px'; download.onclick = () => { const a = document.createElement('a'); a.href = url; a.setAttribute('download', f.name); a.click(); };
+          const print = document.createElement('button'); print.textContent = 'Print'; print.style.marginLeft = '8px'; print.onclick = () => openAndPrint(url);
+          actions.appendChild(open); actions.appendChild(download); actions.appendChild(print);
+        } else {
+          const lockedSpan = document.createElement('span'); lockedSpan.className = 'small'; lockedSpan.textContent = 'Locked'; actions.appendChild(lockedSpan);
+        }
+
+        item.appendChild(meta); item.appendChild(actions);
+        listEl.appendChild(item);
+      });
+    }
+
+    function escapeHtml(s) { return (s || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'); }
+
+    function openAndPrint(url) {
+      // Open in new window/tab where browser can render the file and call print
+      const w = window.open(url);
+      const t = setInterval(() => {
+        try {
+          if (w.document && w.document.readyState === 'complete') {
+            w.focus(); w.print(); clearInterval(t);
+          }
+        } catch (e) { }
+      }, 400);
+    }
+
+    // Toast / popup notifications helper
+    function _ensureToastContainer() {
+      let c = document.getElementById('toastContainer');
+      if (!c) {
+        c = document.createElement('div'); c.id = 'toastContainer'; c.className = 'toast-container';
+        document.body.appendChild(c);
+      }
+      return c;
+    }
+
+    function showToast(message, type = 'info', timeout = 1000) {
+      const c = _ensureToastContainer();
+      const t = document.createElement('div'); t.className = `toast ${type}`; t.textContent = message;
+      c.appendChild(t);
+      // small delay to allow transition
+      requestAnimationFrame(() => t.classList.add('show'));
+      const id = setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => { t.remove(); if (c.children.length === 0) c.remove(); }, 220);
+      }, timeout);
+      // allow click to dismiss early
+      t.addEventListener('click', () => { clearTimeout(id); t.classList.remove('show'); setTimeout(() => { t.remove(); if (c.children.length === 0) c.remove(); }, 220); });
+    }
+
+    unlockBtn.addEventListener('click', () => {
+      const v = pwInput.value || '';
+      if (v === PASSWORD) {
+        unlocked = true;
+        lockedMsg.style.display = 'none';
+        controlsAfter.style.display = 'block';
+        renderList(searchInput.value || '');
+        showToast('Unlocked — you can now open/print/download files.', 'success');
+      } else {
+        showToast('Wrong password', 'error');
+      }
+    });
+
+    lockBtn.addEventListener('click', () => { unlocked = false; lockedMsg.style.display = 'block'; controlsAfter.style.display = 'none'; renderList(); });
+
+    searchInput.addEventListener('input', (e) => { renderList(e.target.value); });
+
+    showAllBtn.addEventListener('click', () => { searchInput.value = ''; renderList(); });
+
+    copyRepoBtn.addEventListener('click', () => {
+      const sample = BASE_URL || 'https://raw.githubusercontent.com/<dinesh7668>/<Docs-Container>/main/docs/';
+      navigator.clipboard.writeText(sample).then(() => showToast('Copied base raw URL to clipboard', 'success')).catch(() => showToast('Failed to copy to clipboard', 'error'));
+    });
+
+    // Toggle GitHub fields
+    ghUpload.addEventListener('change', (e) => {
+      ghFields.style.display = e.target.checked ? 'flex' : 'none';
+    });
+
+    // Upload handler
+    uploadBtn.addEventListener('click', async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) { showToast('Select a file first', 'error'); return; }
+
+      // If GitHub upload requested
+      if (ghUpload.checked) {
+        const owner = (ghOwner.value || '').trim();
+        const repo = (ghRepo.value || '').trim();
+        const branch = (ghBranch.value || 'main').trim() || 'main';
+        const token = (ghToken.value || '').trim();
+        if (!owner || !repo) { showToast('Provide owner and repo for GitHub upload', 'error'); return; }
+        showToast('Uploading to GitHub...', 'info', 5000);
+        try {
+          const res = await uploadToGitHub(owner, repo, branch, token, file);
+          if (res && res.content) {
+            // Construct raw URL (public raw URL pattern)
+            const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/docs/${encodeURIComponent(file.name)}`;
+            FILES.push({ name: file.name, url: rawUrl, type: file.type || '' });
+            currentFiles = FILES.slice();
+            renderList();
+            showToast('Upload complete and added to list', 'success');
+          } else {
+            showToast('Upload finished but unexpected response', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('GitHub upload failed: ' + (err.message || err), 'error');
+        }
+      } else {
+        // Local-only: create a download link so user can save into their `docs/` folder
+        showToast('Preparing file for download. Save it into the project `docs/` folder.', 'info', 5000);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(file);
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Add in-memory entry so it appears immediately (note: not persisted)
+        FILES.push({ name: file.name, url: '/docs/' + file.name, type: file.type || '' });
+        currentFiles = FILES.slice();
+        renderList();
+        showToast('File prepared locally — move it to `docs/` to persist.', 'success');
+      }
+    });
+
+    // Upload to GitHub via REST API (requires token for private repos)
+    async function fileToBase64(file) {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error || new Error('File read error'));
+        reader.onload = () => {
+          const result = reader.result || '';
+          const idx = result.indexOf(',');
+          const base64 = idx >= 0 ? result.slice(idx + 1) : result;
+          resolve(base64);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadToGitHub(owner, repo, branch, token, file) {
+      const path = `docs/${file.name}`;
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `token ${token}`;
+
+      // Check if file already exists to obtain `sha` for update
+      let sha = null;
+      try {
+        const checkResp = await fetch(url + `?ref=${encodeURIComponent(branch)}`, { method: 'GET', headers });
+        if (checkResp.ok) {
+          const json = await checkResp.json();
+          sha = json.sha;
+        } else if (checkResp.status !== 404) {
+          const txt = await checkResp.text();
+          throw new Error(`GitHub check error ${checkResp.status}: ${txt}`);
+        }
+      } catch (err) {
+        // If network/CORS error or other issue, surface it to caller
+        throw new Error('Error checking existing file on GitHub: ' + (err.message || err));
+      }
+
+      // Convert file to base64 safely
+      const base64 = await fileToBase64(file);
+
+      const body = { message: `Add ${file.name} via docs uploader`, content: base64, branch };
+      if (sha) body.sha = sha; // include sha to update existing file
+
+      const resp = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`GitHub API error ${resp.status}: ${txt}`);
+      }
+      return resp.json();
+    }
+
+    // Initial render (locked)
+    renderList();
+
+    // If you want to load a manifest.json from the repo instead of editing FILES in the HTML,
+    // you could fetch it like this (manifest should be public raw URL):
+    // fetch('https://raw.githubusercontent.com/your/yourrepo/main/manifest.json').then(r=>r.json()).then(m=>{ currentFiles = m.files; renderList(); })
+
+  </script>
+</body>
+
+</html>
